@@ -439,7 +439,7 @@ function hostBreaking(){ const left = D.breaking.filter(b => !H.bUsed.includes(b
   const b = left[0]; H.bUsed.push(b.id); H.bCur = b.id; teams().forEach(t => { if (!t.bDone.includes(b.id) && !t.bQueue.includes(b.id)) t.bQueue.push(b.id); });
   bcast({ t: "breaking" }); addTick("📣 EILMELDUNG an alle Redaktionen!"); hsave(); hrender(); }
 function studentWay(){ if (!NET.bc && /^https?:/.test(location.protocol)) return `Tablets: <b>${esc(location.host + location.pathname.replace(/index\.html$/, ""))}</b> aufrufen → „Als Redaktion mitspielen“ → Code eingeben`;
-  return "Tablets: <b>bildungshexe.github.io/Redaktion</b> im Browser öffnen (oder die Schüler-Datei) → „Als Redaktion mitspielen“ → Code eingeben"; }
+  return "Tablets: <b>bildungshexe.github.io/Redaktion</b> im Browser öffnen → „Als Redaktion mitspielen“ → Code eingeben"; }
 function hrender(){ if (!H) return;
   const ts = teams().sort((a, b) => value(b) - value(a));
   if (H.phase === "end") return hostBilanz();
