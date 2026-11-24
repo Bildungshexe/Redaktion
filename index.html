@@ -224,6 +224,12 @@ table.bil{width:100%;border-collapse:collapse;font-size:17px}
 table.bil th,table.bil td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.15);text-align:left}
 table.bil th{color:#f1dc9c;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
 .pk{display:flex;gap:6px;margin:6px 0 10px}.pk i{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.15)}.pk i.d{background:#2fae7c}.pk i.x{background:#e0475c}.pk i.c{background:#f1dc9c}
+.evtabs{gap:8px;flex-wrap:wrap;margin:10px 0 14px}.gsbox{padding:12px 16px;margin-bottom:12px}.gsbox summary{cursor:pointer}
+.inp.sm{font-size:15px;padding:5px 8px;width:80px;display:inline-block}select.inp.sm{width:auto}
+.thgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}.thgrid label{display:flex;flex-direction:column;font-size:13px;color:#cfd9ef}.thgrid .inp{width:100%}
+table.ev{font-size:15px}table.ev td.ws{font-size:13px;color:#cfd9ef;min-width:240px}table.conf td{text-align:center}td.okc{background:rgba(46,160,90,.35);font-weight:700}td.badc{background:rgba(200,16,46,.18)}
+.hb{display:grid;grid-template-columns:170px 1fr 40px;align-items:center;gap:8px;margin:6px 0}.hb i{display:block;height:16px;background:linear-gradient(90deg,#c8102e,#f1dc9c);border-radius:8px}.hb span{font-size:15px}
+.dots{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}.dots i{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.2)}.dots i.on{background:#2ea05a}
 @media print{
  body{background:#fff;color:#000;font-size:12pt}#app{position:static}.bg,.tod,.ticker,.noprint{display:none!important}
  .scroll{position:static;overflow:visible}.glass{background:#fff;border:1px solid #999;box-shadow:none;backdrop-filter:none;color:#000}
@@ -341,11 +347,14 @@ function hostSetup(){ if (!ensureData()) return home(); app(`<div class="bg" sty
   <div class="brand">Eilmeldung!<small>Schicht einrichten</small></div>
   <div class="field"><span class="t">Länge der Schicht</span><div class="seg">${[30, 45, 60].map(m => `<input type="radio" name="du" id="du${m}" value="${m}" ${m === 45 ? "checked" : ""}><label for="du${m}">${m} Minuten</label>`).join("")}</div>
    <div class="note">Jede Redaktion arbeitet im eigenen Tempo. Spielzeit im Spiel: Heiligabend 6 Uhr bis Dreikönig 22 Uhr.</div></div>
+  <div class="field"><span class="t">Art der Schicht</span><div class="seg"><input type="radio" name="mo" id="mo0" value="spiel" checked><label for="mo0">🎮 Normale Schicht</label><input type="radio" name="mo" id="mo1" value="exam"><label for="mo1">📋 Bewertungsschicht</label></div>
+   <div class="note">Bewertungsschicht: jede Person an einem eigenen Gerät (bis 30), alle bekommen dieselben Meldungen in derselben Reihenfolge, ohne Exklusiv-Bonus, 🔥 und Weitergeben; der Beamer zeigt keine Namen und keine Rangliste. Danach: Auswertung mit Notenvorschlag und Export.</div></div>
   <div class="field"><span class="t">Extras</span><div class="seg"><input type="checkbox" id="ex" checked><label for="ex">⚡ Exklusiv-Bonus für die erste richtige Redaktion</label><input type="checkbox" id="fi" checked><label for="fi">🔥 Glaubwürdigkeits-Einsatz erlauben</label></div></div>
   <div class="row" style="margin-top:18px"><button class="btn ghost" onclick="home()">Zurück</button><span class="sp"></span><button class="btn gold big" style="width:auto" onclick="hostCreate()">Redaktionsraum öffnen</button></div></div></div>`); }
 function val(n){ const e = document.querySelector(`input[name=${n}]:checked`); return e ? e.value : null; }
 function newCode(){ const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s = ""; for (let i = 0; i < 5; i++) s += A[Math.floor(Math.random() * A.length)]; return s; }
-function hostCreate(){ H = { code: newCode(), cfg: { dur: +val("du"), excl: $("#ex").checked, fire: $("#fi").checked }, teams: {}, phase: "lobby", start: 0, end: 0, first: {}, tick: [], bUsed: [], bCur: null }; hsave(); hostStart(); }
+function hostCreate(){ H = { code: newCode(), cfg: { dur: +val("du"), excl: $("#ex").checked, fire: $("#fi").checked }, teams: {}, phase: "lobby", start: 0, end: 0, first: {}, tick: [], bUsed: [], bCur: null };
+  H.log = []; if (val("mo") === "exam") { H.cfg.exam = true; H.cfg.excl = false; H.cfg.fire = false; H.seed = Math.floor(Math.random() * 1e9); } hsave(); hostStart(); }
 function hostResume(){ if (!ensureData()) return home(); H = LS.get(K_HOST); if (!H) return home(); hostStart(); }
 function hsave(){ LS.set(K_HOST, H); }
 function hostStart(){ const st = t => { const e = $("#nst"); if (e) e.innerHTML = t; };
@@ -357,12 +366,12 @@ function hostStart(){ const st = t => { const e = $("#nst"); if (e) e.innerHTML 
 function htick(){ if (H.phase === "live") { if (Date.now() >= H.end) { hostEnd(); return; } const c = $("#hclock"), r = $("#hrem"); if (c) c.textContent = gameClock(frac()); if (r) r.textContent = mmss(H.end - Date.now()); const t = $("#tod"); if (t) t.style.background = todColor(frac()); } }
 function frac(){ return H.phase === "lobby" ? 0 : Math.min(1, (Date.now() - H.start) / (H.end - H.start)); }
 function addTick(s){ H.tick.push(s); if (H.tick.length > 12) H.tick.shift(); const r = $("#trun"); if (r) r.textContent = tickTxt(); }
-function tickTxt(){ return H.tick.length ? H.tick.slice().reverse().join("   ✦   ") : "Die Weihnachtsredaktion ist auf Sendung – gleich geht's los."; }
+function tickTxt(){ if (H && H.cfg && H.cfg.exam) return "📋 Bewertungsschicht – jede Redaktion arbeitet für sich. Prüft jede Meldung im Archiv."; return H.tick.length ? H.tick.slice().reverse().join("   ✦   ") : "Die Weihnachtsredaktion ist auf Sendung – gleich geht's los."; }
 function teams(){ return Object.values(H.teams); }
 function value(t){ return Math.round(t.reach * t.cred / 100); }
 function send(t, m){ if (t.cid) HN.send(t.cid, { ...m, now: Date.now() }); }
 function bcast(m){ teams().forEach(t => send(t, m)); }
-function hNewTeam(tid, name){ const q = {}; for (let r = 0; r < 4; r++) q[r] = shuffle(D.reports.filter(x => x.r === r).map(x => x.id));
+function hNewTeam(tid, name){ const q = {}; for (let r = 0; r < 4; r++) q[r] = (H.cfg.exam ? l => seeded(l, H.seed + r) : shuffle)(D.reports.filter(x => x.r === r).map(x => x.id));
   return { tid, name, rank: 0, prog: 0, reach: 0, cred: 100, ok: 0, bad: 0, rueges: 0, excl: 0, pack: 0, packStep: 0, packOk: 0, passUsed: false, q, wrongIds: [], bQueue: H.bCur ? [H.bCur] : [], bDone: [], lockUntil: 0, promo: null, cur: null, kword: false, sent: [] }; }
 function hState(t){ const R = D.ranks[t.rank]; return { rank: t.rank, prog: t.prog, need: R.need, reach: t.reach, cred: t.cred, ok: t.ok, bad: t.bad, rueges: t.rueges, excl: t.excl, pack: t.pack, packs: D.packs.length, passUsed: t.passUsed, lockUntil: t.lockUntil }; }
 function hNext(t){
@@ -381,6 +390,7 @@ function hView(t){ const c = hNext(t); let v;
   else if (c.kind === "kodex") { const k = c.pack.kodex; v = { kind: "kodex", key: c.pack.id + "-k", title: c.pack.title, kcase: k.case, opts: shuffle(k.opts), src: D.kodexSrc }; }
   else { const it = c.item; v = { kind: c.kind, key: it.id, txt: it.txt.replace(/\{\{(.+?)\}\}/, "[[$1]]"), acts: c.kind === "b" ? "SKVZ" : D.ranks[t.rank].acts };
     if (c.kind === "c") { v.title = c.pack.title; v.step = t.packStep; } }
+  if (t.cur !== v.key || t.viewAt == null) { t.viewAt = Date.now(); t.docCur = 0; }
   t.cur = v.key; t.kword = false; const arch = c && c.kind !== "kodex" ? hArchive(t, c) : [];
   v.arch = arch; send(t, { t: "view", v, docs: hDocs(t, arch), st: hState(t), promo: t.promo, cfg: H.cfg }); t.promo = null; hsave(); }
 function hostMsg(cid, m){ if (!m || !m.t) return;
@@ -391,9 +401,11 @@ function hostMsg(cid, m){ if (!m || !m.t) return;
   if (H.phase !== "live") return;
   const key = m.key == null ? null : m.key;
   if (m.t === "next") { hView(t); return; }
+  if (m.t === "doc") { if (key != null && key === t.cur) t.docCur = (t.docCur || 0) + 1; return; }
   if (key !== t.cur) { if (t.cur != null) hView(t); return; } /* veraltete Anfrage */
   const c = hNext(t); if (!c) { hView(t); return; }
-  if (m.t === "skip") { if (c.kind === "r") { const q = t.q[t.rank]; q.push(q.shift()); } hView(t); return; }
+  if (m.t === "skip") { if (c.kind === "r") { logPush({ tid: t.tid, id: c.item.id, k: "skip", ms: Date.now() - (t.viewAt || Date.now()), docs: t.docCur || 0, at: Date.now() - H.start }); const q = t.q[t.rank]; q.push(q.shift()); } hView(t); return; }
+  if (m.t === "pass" && H.cfg.exam) { hView(t); return; }
   if (m.t === "pass") { if (c.kind === "r" && t.rank >= 2 && t.rank < 4 && !t.passUsed) { t.passUsed = true; t.q[t.rank].shift(); t.prog++; hPromoCheck(t); } hView(t); return; }
   if (Date.now() < t.lockUntil - 800) return; /* Sperre läuft noch */
   if (m.t === "kodex" && c.kind === "kodex") return hKodex(t, c, +m.z);
@@ -420,6 +432,8 @@ function hJudge(t, c, ok, m, wrongWord, fixTry){ const it = c.item, R = c.kind =
   else { const loss = Math.round(R.loss * (fire ? 2 : 1)); res.loss = loss;
     res.why = m.a === "K" && wrongWord ? `Ihr habt „${wrongWord}“ markiert – das stimmt aber.` : m.a === "K" && fixTry != null ? `Das falsche Wort war richtig erkannt, aber „${fixTry}“ ist nicht die richtige Korrektur.` : `Eure Entscheidung: ${ACT[m.a][1]}. Richtig wäre: ${ACT[it.t][1]} – ${ACTX[it.t]}`;
     Object.assign(res, hBad(t, loss)); }
+  logPush({ tid: t.tid, id: it.id, k: c.kind, r: t.rank, a: m.a, sol: it.t, ok, err: ok ? null : (m.a === "K" && it.t === "K" ? (wrongWord != null ? "Wort" : "Korrektur") : "Einordnung"),
+    w: wrongWord != null ? wrongWord : (m.a === "K" && it.t === "K" && !ok ? null : undefined), fx: fixTry != null ? fixTry : undefined, ms: Date.now() - (t.viewAt || Date.now()), docs: t.docCur || 0, at: Date.now() - H.start });
   /* weiterzählen */
   if (c.kind === "b") { t.bQueue.shift(); t.bDone.push(it.id); }
   else if (c.kind === "r") { t.q[t.rank].shift(); if (ok) t.prog++; else t.wrongIds.push(it.id); }
@@ -431,6 +445,7 @@ function hKodex(t, c, z){ const p = c.pack, k = p.kodex, ok = k.ok.includes(z), 
   if (ok) { const pts = Math.round(150 * R.mult); t.reach += pts; t.ok++; t.packOk++; res.pts = pts; }
   else { res.loss = R.loss; res.right = k.opts.filter(o => k.ok.includes(o[0])).map(o => o[1]).join(" oder "); Object.assign(res, hBad(t, R.loss)); }
   if (t.packOk === 4) { const b = Math.round(100 * R.mult); t.reach += b; res.bonus = b; }
+  logPush({ tid: t.tid, id: p.id + "-k", k: "kodex", r: t.rank, a: "Ziffer " + z, sol: "Kodex", ok, err: ok ? null : "Kodex", ms: Date.now() - (t.viewAt || Date.now()), docs: t.docCur || 0, at: Date.now() - H.start });
   t.pack++; t.packStep = 0; t.packOk = 0; t.cur = null; addTick(`⭐ ${t.name} schließt Dossier-Paket „${p.title}“ ab`);
   send(t, { ...res, st: hState(t) }); hsave(); hrender(); }
 function hostGo(){ H.phase = "live"; H.start = Date.now(); H.end = H.start + H.cfg.dur * 60000; addTick("Die Schicht beginnt – Heiligabend, 6 Uhr"); bcast({ t: "start", start: H.start, end: H.end, cfg: H.cfg }); hsave(); hrender(); }
@@ -442,7 +457,7 @@ function studentWay(){ if (!NET.bc && /^https?:/.test(location.protocol)) return
   return "Tablets: <b>bildungshexe.github.io/Redaktion</b> im Browser öffnen (oder die Schüler-Datei) → „Als Redaktion mitspielen“ → Code eingeben"; }
 function hrender(){ if (!H) return;
   const ts = teams().sort((a, b) => value(b) - value(a));
-  if (H.phase === "end") return hostBilanz();
+  if (H.phase === "end") return EVON ? evRender() : hostBilanz();
   const head = `<div class="glass top"><span class="live">● LIVE</span><div class="brand">Eilmeldung!<small>Die Weihnachtsredaktion · Leitstand</small></div>
     <div class="kp"><div><b id="hclock">${gameClock(frac())}</b><small>Zeit im Spiel</small></div><div><b id="hrem">${H.phase === "live" ? mmss(H.end - Date.now()) : H.cfg.dur + ":00"}</b><small>Schicht</small></div></div></div>`;
   let body;
@@ -452,7 +467,9 @@ function hrender(){ if (!H) return;
      <div class="bgrid" style="margin:18px 0">${ts.map(t => `<div class="glass tc"><div class="nm">${esc(t.name)}</div><div class="note">${t.online ? "🟢 verbunden" : "⚪ getrennt"}</div></div>`).join("") || `<div class="note">Noch keine Redaktion verbunden.</div>`}</div>
      <button class="btn gold big" style="max-width:420px" ${ts.length ? "" : "disabled"} onclick="hostGo()">Schicht starten (${H.cfg.dur} Min)</button>
      <p class="note" style="margin-top:14px">Wichtig: Dieser Leitstand führt alle Meldungen und Spielstände. Bitte während der Schicht geöffnet lassen.</p></div>`;
-  else body = `<div class="bgrid">${ts.map((t, i) => { const R = D.ranks[t.rank] || D.ranks[0]; const need = R.need || 1; return `<div class="glass tc">${t.online ? "" : `<span class="off">getrennt</span>`}
+  else if (H.cfg.exam && !H.showNames) body = examBoard() + `<div class="row noprint" style="margin-top:16px;justify-content:center"><button class="btn red" onclick="hostBreaking()">📣 Eilmeldung an alle (${D.breaking.length - H.bUsed.length} übrig)</button>
+     <button class="btn ghost" onclick="if(confirm('Schicht jetzt beenden?'))hostEnd()">⏹ Redaktionsschluss</button><button class="btn ghost" onclick="if(confirm('Namen und Punktstände anzeigen? Nicht am Beamer!')){H.showNames=true;hrender()}">👁 Lehrkraft-Ansicht</button><span id="nst" class="note"></span></div>`;
+  else body = (H.cfg.exam ? `<div class="row noprint" style="margin-bottom:10px"><button class="btn gold" onclick="H.showNames=false;hrender()">🙈 Namen ausblenden (Beamer)</button></div>` : "") + `<div class="bgrid">${ts.map((t, i) => { const R = D.ranks[t.rank] || D.ranks[0]; const need = R.need || 1; return `<div class="glass tc">${t.online ? "" : `<span class="off">getrennt</span>`}
      <div class="nm">${i + 1}. ${esc(t.name)}</div><div class="rk">${R.icon} ${R.name}</div>
      <div class="note">Reichweite <b style="color:#fff">${fmt(t.reach)}</b> · Glaubwürdigkeit <b style="color:#fff">${t.cred} %</b></div>
      <div class="bar cred"><i style="width:${t.cred}%"></i></div>
@@ -462,10 +479,10 @@ function hrender(){ if (!H) return;
   app(`<div class="bg" style="background-image:url(${IMG[4]})"></div><div class="tod" id="tod" style="background:${todColor(frac())}"></div>
    <div class="scroll" style="padding-bottom:70px">${head}${body}</div>
    <div class="ticker"><div class="lb">EILMELDUNG</div><div class="run" id="trun">${esc(tickTxt())}</div></div>`); }
-function hostBilanz(){ const ts = teams().sort((a, b) => value(b) - value(a));
+function hostBilanz(){ if (H.cfg.exam && !H.bilSeen) { H.bilSeen = true; hsave(); return evOpen("bil"); } const ts = teams().sort((a, b) => value(b) - value(a));
   const best = (f, lab) => { const s = ts.slice().sort((a, b) => f(b) - f(a))[0]; return s ? `<div class="tile"><span>${lab[0]}</span><div class="note">${lab[1]}</div><b>${esc(s.name)}</b></div>` : ""; };
   app(`<div class="bg" style="background-image:url(${IMG[4]})"></div><div class="scroll"><div class="glass card" style="max-width:1100px;margin:10px auto">
-   <div class="row"><div class="brand">Redaktionsbilanz<small>Eilmeldung! Die Weihnachtsredaktion · Schicht vom ${new Date().toLocaleDateString("de-DE")}</small></div><span class="sp"></span><button class="btn gold noprint" onclick="window.print()">🖨️ Drucken</button><button class="btn ghost noprint" onclick="LS.del(K_HOST);home()">Neue Schicht</button></div>
+   <div class="row"><div class="brand">Redaktionsbilanz<small>Eilmeldung! Die Weihnachtsredaktion · Schicht vom ${new Date().toLocaleDateString("de-DE")}</small></div><span class="sp"></span><button class="btn gold noprint" onclick="evOpen('${H.cfg.exam ? "bil" : "fra"}')">📊 Auswertung &amp; Note</button><button class="btn ghost noprint" onclick="window.print()">🖨️ Drucken</button><button class="btn ghost noprint" onclick="if(confirm('Neue Schicht? Die Auswertung dieser Schicht wird gelöscht. Vorher exportieren!')){LS.del(K_HOST);home()}">Neue Schicht</button></div>
    <div class="tiles">${best(value, ["🏆", "Höchster Redaktionswert"])}${best(t => t.cred * 1000 + t.ok, ["🛡️", "Glaubwürdigste Redaktion"])}${best(t => t.excl || 0, ["⚡", "Meiste Exklusivmeldungen"])}</div>
    <table class="bil"><tr><th>Platz</th><th>Redaktion</th><th>Rang</th><th>Reichweite</th><th>Glaubwürdigkeit</th><th>Redaktionswert</th><th>richtig / falsch</th><th>⚡ Exklusiv</th><th>⚠️ Rügen</th></tr>
    ${ts.map((t, i) => `<tr><td>${i + 1}.</td><td><b>${esc(t.name)}</b></td><td>${D.ranks[t.rank].icon} ${D.ranks[t.rank].name}</td><td>${fmt(t.reach)}</td><td>${t.cred} %</td><td><b>${fmt(value(t))}</b></td><td>${t.ok} / ${t.bad}</td><td>${t.excl || 0}</td><td>${t.rueges || 0}</td></tr>`).join("")}</table>
@@ -477,7 +494,7 @@ function joinScreen(){ const ts = LS.get(K_TEAM);
   app(`<div class="bg" style="background-image:url(${IMG[0]})"></div><div class="scroll"><div class="glass card" style="max-width:640px;margin:30px auto">
    <div class="brand">Eilmeldung!<small>Redaktion anmelden</small></div>
    <div class="field"><span class="t">Raum-Code (steht am Beamer)</span><input class="inp" id="jc" maxlength="5" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:.2em" value="${esc(ts && ts.code || "")}"></div>
-   <div class="field"><span class="t">Name eurer Redaktion</span><input class="inp" id="jn" maxlength="24" placeholder="z. B. Nordlicht-Kurier" value="${esc(ts && ts.name || "")}"></div>
+   <div class="field"><span class="t">Name eurer Redaktion</span><input class="inp" id="jn" maxlength="24" placeholder="z. B. Nordlicht-Kurier – bei Bewertung: Vor- und Nachname" value="${esc(ts && ts.name || "")}"></div>
    <div id="jerr" class="note"></div>
    <div class="row" style="margin-top:14px"><button class="btn ghost" onclick="home()">Zurück</button><span class="sp"></span><button class="btn gold" onclick="teamJoin()">Beitreten</button></div></div></div>`); }
 function teamJoin(){ const code = $("#jc").value.trim().toUpperCase(), name = $("#jn").value.trim(); if (code.length !== 5 || !name) { $("#jerr").textContent = "Bitte Code (5 Zeichen) und Redaktionsnamen eingeben."; return; }
@@ -534,7 +551,7 @@ function render(){ if (!T) return; closeOvl(); MODE = null;
   if (PEND && idle()) nextReq(); }
 function toolsHtml(){ const out = [];
   if (CFG.fire !== false) out.push(`<div class="fire ${FIRE ? "on" : ""}" onclick="FIRE=!FIRE;this.classList.toggle('on')"><span class="sw"></span>🔥 Hand ins Feuer<br><span class="note" style="font-weight:400">doppelte Reichweite – aber doppelter Verlust</span></div>`);
-  if (S.rank >= 2 && S.rank < 4) out.push(`<button class="btn small ghost" ${S.passUsed || V.kind !== "r" ? "disabled" : ""} onclick="pass()">🤝 Weitergeben ${S.passUsed ? "(verbraucht)" : "(1×)"}</button>`);
+  if (S.rank >= 2 && S.rank < 4 && !CFG.exam) out.push(`<button class="btn small ghost" ${S.passUsed || V.kind !== "r" ? "disabled" : ""} onclick="pass()">🤝 Weitergeben ${S.passUsed ? "(verbraucht)" : "(1×)"}</button>`);
   if (S.rank >= 3) out.push(`<button class="btn small ghost" onclick="compare()">🔍 Quellenvergleich</button>`);
   if (V.kind === "r") out.push(`<button class="btn small ghost" onclick="skip()">⏭️ Später bearbeiten</button>`);
   return out.join(""); }
@@ -589,7 +606,7 @@ function promoOvl(p){ const old = RANKS[p.from], R = RANKS[p.to];
    <div class="row"><span class="sp"></span><button class="btn gold" onclick="closeOvl();if(PEND)nextReq()">An die Arbeit ➜</button></div>`); }
 function skip(){ if (!V || !V.key) return; busy(); tsend({ t: "skip", key: V.key }); }
 function pass(){ if (!V || V.kind !== "r" || S.passUsed) return; if (!confirm("Diese Meldung an eine Kollegin weitergeben? Sie zählt als erledigt, bringt aber keine Reichweite.")) return; busy(); tsend({ t: "pass", key: V.key }); }
-function openDoc(k){ ovl(`${docHtml(k)}<div class="row" style="margin-top:12px">${S && S.rank >= 3 ? `<button class="btn small ghost" onclick="compare('${esc(k)}')">🔍 Zweites Dokument daneben</button>` : ""}<span class="sp"></span><button class="btn gold" onclick="closeOvl()">Schließen</button></div>`); }
+function openDoc(k){ if (V && V.key) tsend({ t: "doc", key: V.key, k }); ovl(`${docHtml(k)}<div class="row" style="margin-top:12px">${S && S.rank >= 3 ? `<button class="btn small ghost" onclick="compare('${esc(k)}')">🔍 Zweites Dokument daneben</button>` : ""}<span class="sp"></span><button class="btn gold" onclick="closeOvl()">Schließen</button></div>`); }
 function search(v){ const out = $("#shits"); v = v.trim().toLowerCase(); if (v.length < 3) { out.innerHTML = ""; return; }
   const hits = Object.keys(DOCS).filter(k => (DOCS[k][0] + " " + DOCS[k][1]).toLowerCase().includes(v)).slice(0, 8);
   out.innerHTML = hits.length ? hits.map(k => `<button class="chip" style="border-style:solid" onclick="openDoc('${esc(k)}')">🔎 ${esc(DOCS[k][0])}</button>`).join("") : `<span class="note">Kein Treffer.</span>`; }
@@ -597,7 +614,7 @@ function compare(a){ const ks = Object.keys(DOCS).sort((x, y) => DOCS[x][0].loca
   const sel = (id, v) => `<select id="${id}" class="inp" style="font-size:16px;padding:8px" onchange="cmpUpd()">${ks.map(k => `<option value="${esc(k)}" ${k === v ? "selected" : ""}>${esc(DOCS[k][0])}</option>`).join("")}</select>`;
   const first = a || (V && V.arch && V.arch[0]) || ks[0];
   ovl(`<h2>🔍 Quellenvergleich</h2><div class="docs2"><div>${sel("c1", first)}<div id="d1" style="margin-top:8px"></div></div><div>${sel("c2", ks[0] === first ? ks[1] : ks[0])}<div id="d2" style="margin-top:8px"></div></div></div><div class="row" style="margin-top:12px"><span class="sp"></span><button class="btn gold" onclick="closeOvl()">Schließen</button></div>`); cmpUpd(); }
-function cmpUpd(){ $("#d1").innerHTML = docHtml($("#c1").value); $("#d2").innerHTML = docHtml($("#c2").value); }
+function cmpUpd(){ if (V && V.key) tsend({ t: "doc", key: V.key, k: "cmp" }); $("#d1").innerHTML = docHtml($("#c1").value); $("#d2").innerHTML = docHtml($("#c2").value); }
 function kodexHtml(v){ return `<div class="glass main" id="mainc"><div class="tag">⭐ Dossier-Paket „${esc(v.title)}“ · Pressekodex</div>
    <p style="font-size:15px;color:#cfd9ef">Modellfall (erfunden):</p><p class="meld" style="font-size:21px">${esc(v.kcase)}</p><p><b>Welche Ziffer des Pressekodex ist berührt?</b></p>
    <div class="opts">${v.opts.map(o => `<button onclick="kodex(${+o[0]})">${esc(o[1])}</button>`).join("")}</div>
@@ -610,6 +627,188 @@ function teamEnd(){ if (!S) { app(`<div class="bg" style="background-image:url($
    <div class="tiles"><div class="tile"><span>📈</span><div class="note">Reichweite</div><b>${fmt(S.reach)}</b></div><div class="tile"><span>🛡️</span><div class="note">Glaubwürdigkeit</div><b>${S.cred} %</b></div><div class="tile"><span>🏆</span><div class="note">Redaktionswert</div><b>${fmt(v)}</b></div></div>
    <p class="note">Richtig: ${S.ok} · Falsch: ${S.bad} · ⚡ Exklusiv: ${S.excl} · ⚠️ Rügen: ${S.rueges}</p>
    <button class="btn ghost" onclick="LS.del(K_TEAM);home()">Zur Startseite</button></div></div>`); }
+
+/* ================= ZUSATZ: Bewertungsschicht, Protokoll und Auswertung ================= */
+/* Ändert die Spielmechanik nicht. Im Bewertungsmodus erhalten alle dieselbe Reihenfolge; Bonus, Risiko und Weitergeben sind aus. */
+function seeded(a, seed){ a = a.slice(); let x = seed >>> 0; const rnd = () => { x = (x + 0x6D2B79F5) >>> 0; let t = x; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function logPush(e){ if (!H.log) H.log = []; H.log.push(e); }
+function itemInfo(id){
+  let it = D.reports.find(x => x.id === id), lab;
+  if (it) lab = D.ranks[it.r].name;
+  if (!it) { it = D.breaking.find(x => x.id === id); if (it) lab = "Eilmeldung"; }
+  if (!it) { const m = /^(.+)-(\d|k)$/.exec(id); const p = m && D.packs.find(x => x.id === m[1]);
+    if (p && m[2] === "k") { const k = p.kodex; return { id, lab: "Pressekodex · " + p.title, txt: k.case, sol: "Kodex", solTxt: k.opts.filter(o => k.ok.includes(o[0])).map(o => o[1]).join(" oder "), exp: k.exp, doc: null, kodex: k }; }
+    if (p) { it = p.items[+m[2]]; lab = "Dossier-Paket · " + p.title; } }
+  if (!it) return { id, lab: "?", txt: id, sol: "?", solTxt: "", exp: "", doc: null };
+  const wrong = (/\{\{(.+?)\}\}/.exec(it.txt) || [])[1];
+  return { id, lab, txt: plain(it.txt), sol: it.t, solTxt: it.t === "K" ? txt2(it.txt, it.opts[0]) : plain(it.txt), exp: it.exp || "", doc: it.doc, wrong, fix: it.t === "K" ? it.opts[0] : null }; }
+const ERRN = { Einordnung: "falsche Einordnung", Wort: "falsches Wort markiert", Korrektur: "falsche Korrektur", Kodex: "falsche Kodex-Ziffer" };
+const ACTN = { S: "Senden", K: "Korrigieren", V: "Verwerfen", Z: "Zurückhalten" };
+function med(a){ if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; }
+function cnt(arr){ const o = {}; arr.forEach(x => { if (x != null && x !== "") o[x] = (o[x] || 0) + 1; }); return Object.entries(o).sort((a, b) => b[1] - a[1]); }
+const pc = x => Math.round(x * 100) + " %";
+function gsDefault(){ const mx = Math.max(1, ...teams().map(t => (H.log || []).filter(e => e.tid === t.tid && e.k !== "skip").length));
+  return { w: 70, ziel: Math.max(10, Math.round(mx * 0.8)), scale: "punkte",
+    th: { punkte: [95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 33, 27, 20, 0], noten: [85, 70, 55, 40, 20, 0] }, over: {} }; }
+function GS(){ if (!H.gs) { H.gs = gsDefault(); hsave(); } return H.gs; }
+function gradeOf(score){ const g = GS(), th = g.th[g.scale]; for (let i = 0; i < th.length; i++) if (score * 100 >= th[i]) return g.scale === "punkte" ? String(15 - i) : String(i + 1); return g.scale === "punkte" ? "0" : "6"; }
+function personStats(){ const L = H.log || [], g = GS();
+  return teams().map(t => { const all = L.filter(e => e.tid === t.tid), dec = all.filter(e => e.k !== "skip"), n = dec.length, ok = dec.filter(e => e.ok).length, bad = n - ok;
+    const arch = n ? dec.filter(e => e.docs > 0).length / n : 0, fast = dec.filter(e => e.ms < 8000 && !e.docs).length, skips = all.length - n;
+    const errs = cnt(dec.filter(e => !e.ok).map(e => e.err)); const conf = cnt(dec.filter(e => !e.ok && e.err === "Einordnung" && e.sol !== "Kodex").map(e => ACTN[e.a] + " statt " + ACTN[e.sol]));
+    const wrongIds = cnt(dec.filter(e => !e.ok).map(e => e.id)), rep = wrongIds.filter(x => x[1] > 1).length;
+    const quote = n ? ok / n : 0, umf = Math.min(1, n / Math.max(1, g.ziel)), score = (g.w / 100) * quote + (1 - g.w / 100) * umf;
+    const ws = [];
+    if (n < 3) ws.push("zu wenige Entscheidungen für eine Aussage");
+    else { ws.push(arch >= .7 ? "prüft fast immer im Archiv nach" : arch >= .4 ? "nutzt das Archiv bei etwa der Hälfte der Meldungen" : "entscheidet meist ohne Blick ins Archiv");
+      if (fast / n >= .3) ws.push("viele schnelle Entscheidungen ohne Prüfung");
+      if (skips >= 3) ws.push("stellt schwierige Meldungen oft zurück");
+      if (rep) ws.push("wiederholt Fehler bei derselben Meldung");
+      if (bad >= 2 && errs[0]) ws.push("Fehlerschwerpunkt: " + ERRN[errs[0][0]] + (errs[0][0] === "Einordnung" && conf[0] ? " (meist " + conf[0][0] + ")" : "")); }
+    const auto = gradeOf(score), fin = g.over[t.tid] != null && g.over[t.tid] !== "" ? g.over[t.tid] : auto;
+    return { t, name: t.name, rank: D.ranks[t.rank].name, n, ok, bad, quote, fq: n ? bad / n : 0, arch, medS: Math.round(med(dec.map(e => Math.min(e.ms, 300000))) / 1000), fast, skips, rueges: t.rueges || 0,
+      eW: dec.filter(e => e.err === "Einordnung").length, eWo: dec.filter(e => e.err === "Wort").length, eK: dec.filter(e => e.err === "Korrektur").length, eKo: dec.filter(e => e.err === "Kodex").length,
+      rep, umf, score, auto, fin, ws: ws.join("; ") }; }).sort((a, b) => a.name.localeCompare(b.name, "de")); }
+function itemStats(){ const L = (H.log || []).filter(e => e.k !== "skip"), by = {};
+  L.forEach(e => { (by[e.id] = by[e.id] || []).push(e); });
+  return Object.entries(by).map(([id, es]) => { const I = itemInfo(id), bad = es.filter(e => !e.ok);
+    return { I, n: es.length, bad: bad.length, fq: bad.length / es.length, acts: cnt(es.map(e => e.sol === "Kodex" ? e.a : ACTN[e.a])), wAct: cnt(bad.map(e => e.sol === "Kodex" ? e.a : ACTN[e.a])),
+      words: cnt(bad.filter(e => e.err === "Wort" || (e.err === "Einordnung" && e.a === "K")).map(e => e.w)), fixes: cnt(bad.filter(e => e.err === "Korrektur").map(e => e.fx)), errs: cnt(bad.map(e => e.err)),
+      who: new Set(es.map(e => e.tid)).size }; })
+    .sort((a, b) => b.bad - a.bad || b.fq - a.fq); }
+function confusion(){ const L = (H.log || []).filter(e => e.k !== "skip" && e.sol !== "Kodex"), M = {};
+  "SKVZ".split("").forEach(s => { M[s] = { S: 0, K: 0, V: 0, Z: 0, n: 0 }; });
+  L.forEach(e => { if (M[e.sol] && M[e.sol][e.a] != null) { M[e.sol][e.a]++; M[e.sol].n++; } }); return M; }
+/* ---------- Ansicht ---------- */
+let EV = "bil", NB = 0, NBS = false, EVON = false;
+function evOpen(v){ EVON = true; EV = v || EV; evRender(); }
+function evRender(){ GS();
+  const tabs = [["bil", "📋 Bilanz & Note"], ["fra", "❓ Fragenanalyse"], ["nach", "🗣️ Nachbesprechung (Beamer)"], ["exp", "💾 Export"]];
+  let body = EV === "bil" ? evBil() : EV === "fra" ? evFra() : EV === "nach" ? evNach() : evExp();
+  app(`<div class="bg" style="background-image:url(${IMG[4]})"></div><div class="scroll"><div class="glass card" style="max-width:1280px;margin:10px auto">
+   <div class="row noprint"><div class="brand">Auswertung<small>Eilmeldung! · ${H.cfg.exam ? "Bewertungsschicht" : "Schicht"} vom ${new Date(H.start || Date.now()).toLocaleDateString("de-DE")} · ${teams().length} Teilnehmende</small></div><span class="sp"></span>
+   <button class="btn ghost" onclick="EVON=false;H.bilSeen=true;hostBilanz()">↩ Zur Redaktionsbilanz</button></div>
+   <div class="row noprint evtabs">${tabs.map(t => `<button class="btn ${EV === t[0] ? "gold" : "ghost"}" onclick="evOpen('${t[0]}')">${t[1]}</button>`).join("")}</div>${body}</div></div>`); }
+function evClass(P){ const N = P.filter(p => p.n > 0), av = f => N.length ? N.reduce((s, p) => s + f(p), 0) / N.length : 0, all = (H.log || []).filter(e => e.k !== "skip");
+  const ec = cnt(all.filter(e => !e.ok).map(e => e.err)); const IS = itemStats();
+  return `<div class="tiles" style="grid-template-columns:repeat(5,1fr)"><div class="tile"><span>👥</span><div class="note">Teilnehmende</div><b>${P.length}</b></div>
+   <div class="tile"><span>✅</span><div class="note">Ø Lösungsgrad</div><b>${pc(av(p => p.quote))}</b></div><div class="tile"><span>❌</span><div class="note">Ø Fehlerquote</div><b>${pc(av(p => p.fq))}</b></div>
+   <div class="tile"><span>📰</span><div class="note">Ø bearbeitete Meldungen</div><b>${av(p => p.n).toFixed(1).replace(".", ",")}</b></div><div class="tile"><span>📂</span><div class="note">Ø Archivnutzung</div><b>${pc(av(p => p.arch))}</b></div></div>
+   ${IS[0] && IS[0].bad ? `<div class="glass" style="padding:12px 16px;margin-bottom:12px"><b style="color:#f1dc9c">Am häufigsten gescheitert:</b> „${esc(IS[0].I.txt)}“ – ${IS[0].bad} von ${IS[0].n} Entscheidungen falsch. ${ec[0] ? `<span class="note">Häufigste Fehlerart insgesamt: ${ERRN[ec[0][0]]} (${ec[0][1]}×).</span>` : ""}</div>` : ""}`; }
+function evBil(){ const g = GS(), P = personStats(), th = g.th[g.scale];
+  const labs = g.scale === "punkte" ? th.map((_, i) => (15 - i) + " P") : th.map((_, i) => "Note " + (i + 1));
+  return evClass(P) + `<details class="glass gsbox" ${H.gsOpen ? "open" : ""} ontoggle="H.gsOpen=this.open;hsave()"><summary><b>⚙️ Notenschlüssel einstellen</b> <span class="note">– Vorschlag, bitte an eure Vorgaben anpassen</span></summary>
+    <div class="row" style="flex-wrap:wrap;gap:16px;margin-top:10px">
+     <label>Skala <select class="inp sm" onchange="GS().scale=this.value;hsave();evRender()"><option value="punkte" ${g.scale === "punkte" ? "selected" : ""}>Punkte 15–0 (Oberstufe)</option><option value="noten" ${g.scale === "noten" ? "selected" : ""}>Noten 1–6</option></select></label>
+     <label>Gewichtung Lösungsgrad <input class="inp sm" type="number" min="0" max="100" value="${g.w}" onchange="GS().w=Math.max(0,Math.min(100,+this.value||0));hsave();evRender()"> % <span class="note">(Rest: Umfang)</span></label>
+     <label>Umfang voll erreicht ab <input class="inp sm" type="number" min="1" value="${g.ziel}" onchange="GS().ziel=Math.max(1,+this.value||1);hsave();evRender()"> Entscheidungen</label></div>
+    <div class="note" style="margin:8px 0">Gesamtwert = ${g.w} % × Lösungsgrad + ${100 - g.w} % × Umfang (bearbeitete Entscheidungen ÷ ${g.ziel}, höchstens 100 %). Mindestwerte in Prozent:</div>
+    <div class="thgrid">${th.map((v, i) => `<label><span>${labs[i]}</span><input class="inp sm" type="number" min="0" max="100" value="${v}" onchange="GS().th[GS().scale][${i}]=+this.value||0;hsave();evRender()"></label>`).join("")}</div>
+    <div class="row" style="margin-top:8px"><button class="btn small ghost" onclick="const o=GS().over;H.gs=gsDefault();H.gs.over=o;hsave();evRender()">Standardwerte</button></div></details>
+   <div style="overflow-x:auto"><table class="bil ev"><tr><th>Name</th><th>Stufe</th><th>bearb.</th><th>richtig</th><th>falsch</th><th>Lösungsgrad</th><th>Fehlerquote</th><th>Archiv</th><th>Ø s</th><th>Gesamt</th><th>Vorschlag</th><th>${g.scale === "punkte" ? "Punkte" : "Note"}</th><th>Arbeitsweise</th></tr>
+   ${P.map(p => `<tr><td><b>${esc(p.name)}</b></td><td>${esc(p.rank)}</td><td>${p.n}</td><td>${p.ok}</td><td>${p.bad}</td><td>${pc(p.quote)}</td><td>${pc(p.fq)}</td><td>${pc(p.arch)}</td><td>${p.medS}</td><td>${pc(p.score)}</td><td>${p.auto}</td>
+     <td><input class="inp sm" style="width:58px" value="${esc(g.over[p.t.tid] != null ? g.over[p.t.tid] : "")}" placeholder="${p.auto}" onchange="GS().over['${p.t.tid}']=this.value.trim();hsave();evRender()"></td><td class="ws">${esc(p.ws)}</td></tr>`).join("")}</table></div>
+   <p class="note">Lösungsgrad = richtige ÷ alle Entscheidungen (Meldungen, Eilmeldungen, Dossier-Pakete, Pressekodex). Archiv = Anteil der Entscheidungen, vor denen mindestens ein Dossier geöffnet wurde. Ø s = Median der Bearbeitungszeit. Die Spalte „${g.scale === "punkte" ? "Punkte" : "Note"}“ überschreibt den Vorschlag.</p>`; }
+function bars(list, total){ return list.slice(0, 4).map(([k, v]) => `<div class="hb"><span>${esc(k)}</span><i style="width:${Math.round(v / Math.max(1, total) * 100)}%"></i><b>${v}</b></div>`).join(""); }
+function evFra(){ const IS = itemStats(), M = confusion();
+  const mrow = s => `<tr><td><b>${ACT[s][0]} ${ACTN[s]}</b> <span class="note">(${M[s].n})</span></td>${"SKVZ".split("").map(a => `<td class="${a === s ? "okc" : M[s][a] ? "badc" : ""}">${M[s].n ? pc(M[s][a] / M[s].n) : "–"}</td>`).join("")}</tr>`;
+  return evClass(personStats()) + `<h3>Welche Entscheidungen werden verwechselt?</h3><p class="note">Zeile = richtige Einordnung, Spalte = gewählte Entscheidung. Grün = richtig.</p>
+   <table class="bil conf"><tr><th>richtig wäre</th>${"SKVZ".split("").map(a => `<th>${ACT[a][0]} ${ACTN[a]}</th>`).join("")}</tr>${"SKVZ".split("").map(mrow).join("")}</table>
+   <h3 style="margin-top:18px">Meldungen nach Anzahl der Fehler</h3>
+   <table class="bil ev"><tr><th>#</th><th>Meldung</th><th>Bereich</th><th>falsch</th><th>Quote</th><th>Häufigster Fehler</th><th>Richtig</th></tr>
+   ${IS.filter(x => x.bad).map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.I.txt)}</td><td class="note">${esc(x.I.lab)}</td><td>${x.bad} / ${x.n}</td><td>${pc(x.fq)}</td>
+     <td>${x.wAct[0] ? esc(x.wAct[0][0]) + (x.words[0] ? ` · Wort „${esc(x.words[0][0])}“` : "") + (x.fixes[0] ? ` · Korrektur „${esc(x.fixes[0][0])}“` : "") : ""}</td><td>${x.I.sol === "Kodex" ? esc(x.I.solTxt) : `${ACT[x.I.sol][0]} ${ACTN[x.I.sol]}${x.I.fix ? ` („${esc(x.I.wrong)}“ → „${esc(x.I.fix)}“)` : ""}`}</td></tr>`).join("") || `<tr><td colspan="7">Noch keine Fehler protokolliert.</td></tr>`}</table>`; }
+function evNach(){ const IS = itemStats().filter(x => x.bad); if (!IS.length) return `<p>Keine Fehler – nichts nachzubesprechen. 🎉</p>`;
+  NB = Math.max(0, Math.min(NB, IS.length - 1)); const x = IS[NB], I = x.I;
+  return `<div class="nach"><div class="row"><span class="note">Fehler ${NB + 1} von ${IS.length} · ${esc(I.lab)} · ohne Namen</span><span class="sp"></span>
+    <button class="btn small ghost" ${NB ? "" : "disabled"} onclick="NB--;NBS=false;evRender()">◀ zurück</button><button class="btn small ghost" ${NB < IS.length - 1 ? "" : "disabled"} onclick="NB++;NBS=false;evRender()">weiter ▶</button></div>
+   <p class="meld" style="font-size:26px;margin:14px 0">${esc(I.txt)}</p>
+   <div class="row" style="gap:28px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:300px"><b>So hat die Klasse entschieden (${x.n}):</b>${bars(x.acts, x.n)}</div>
+    ${x.words.length || x.fixes.length ? `<div style="flex:1;min-width:260px">${x.words.length ? `<b>Als falsch markiert:</b>${bars(x.words, x.bad)}` : ""}${x.fixes.length ? `<b>Falsche Korrekturen:</b>${bars(x.fixes, x.bad)}` : ""}</div>` : ""}</div>
+   <p style="margin-top:12px"><b>Leitfrage:</b> Woran hättet ihr erkennen können, was hier stimmt und was nicht? Wo im Archiv steht es?</p>
+   ${NBS ? `<div class="glass" style="padding:14px 18px;margin-top:10px"><div class="tag" style="color:#f1dc9c">Richtig: ${I.sol === "Kodex" ? esc(I.solTxt) : ACT[I.sol][0] + " " + ACTN[I.sol]}</div>
+     ${I.sol !== "Kodex" ? `<p style="margin:6px 0">${esc(I.solTxt)}</p>` : ""}${I.exp ? `<p class="note">${esc(I.exp)}</p>` : ""}</div>${I.doc && D.docs[I.doc] ? (DOCS[I.doc] = D.docs[I.doc], docHtml(I.doc)) : ""}`
+     : `<div class="row" style="margin-top:12px"><button class="btn gold" onclick="NBS=true;evRender()">Lösung aufdecken</button></div>`}</div>`; }
+function evExp(){ return `<div class="row" style="gap:16px;flex-wrap:wrap;align-items:stretch">
+   <div class="glass" style="flex:1;min-width:300px;padding:16px"><h3>📊 Excel-Tabelle</h3><p class="note">Drei Blätter: Bilanz pro Person (mit Note), Fragenanalyse und das vollständige Protokoll aller Entscheidungen.</p><button class="btn gold" onclick="expXlsx()">Excel-Datei speichern</button></div>
+   <div class="glass" style="flex:1;min-width:300px;padding:16px"><h3>📄 PDF-Bericht</h3><p class="note">Öffnet den Druckdialog. Wählt dort „Als PDF speichern“.</p>
+    <label style="display:block;margin:6px 0"><input type="checkbox" id="rp1" checked> Klassenauswertung und Bilanz mit Noten</label>
+    <label style="display:block;margin:6px 0"><input type="checkbox" id="rp2" checked> Fragenanalyse für die Nachbesprechung</label>
+    <label style="display:block;margin:6px 0"><input type="checkbox" id="rp3"> Einzelbögen (eine Seite pro Person)</label>
+    <button class="btn gold" onclick="expPdf()">PDF-Bericht erstellen</button></div></div>
+   <p class="note" style="margin-top:14px">🔒 Alle Daten liegen nur in diesem Browser auf diesem Gerät. „Neue Schicht“ in der Redaktionsbilanz löscht sie. Bewahrt Exporte mit Namen so auf, wie es eure Schule für Notenunterlagen vorsieht.</p>`; }
+/* ---------- Excel (xlsx ohne Zusatzprogramm) ---------- */
+const CRCT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u){ let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRCT[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zipStore(files){ const enc = new TextEncoder(), parts = [], cen = []; let off = 0;
+  files.forEach(f => { const name = enc.encode(f.name), data = enc.encode(f.data), crc = crc32(data);
+    const h = new DataView(new ArrayBuffer(30)); h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
+    parts.push(new Uint8Array(h.buffer), name, data);
+    const c = new DataView(new ArrayBuffer(46)); c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+    cen.push(new Uint8Array(c.buffer), name); off += 30 + name.length + data.length; });
+  const csz = cen.reduce((s, x) => s + x.length, 0), e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csz, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, new Uint8Array(e.buffer)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }); }
+const xe = s => String(s == null ? "" : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function colL(i){ let s = ""; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+function sheetXml(rows, widths){ return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`
+  + `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols><sheetData>`
+  + rows.map((r, ri) => `<row r="${ri + 1}">` + r.map((v, ci) => { const ref = colL(ci) + (ri + 1), s = ri === 0 ? ' s="1"' : (typeof v === "object" && v && v.p != null ? ' s="2"' : "");
+      if (v && typeof v === "object" && v.p != null) return `<c r="${ref}"${s}><v>${v.p}</v></c>`;
+      if (typeof v === "number" && isFinite(v)) return `<c r="${ref}"${s}><v>${v}</v></c>`;
+      return `<c r="${ref}" t="inlineStr"${s}><is><t xml:space="preserve">${xe(v)}</t></is></c>`; }).join("") + `</row>`).join("") + `</sheetData></worksheet>`; }
+function expXlsx(){ const P = personStats(), IS = itemStats(), g = GS(), S1 = [["Name", "Stufe erreicht", "Entscheidungen", "richtig", "falsch", "Lösungsgrad", "Fehlerquote", "Archivnutzung", "Median Bearbeitungszeit (s)", "Schnellentscheidungen ohne Archiv", "Später bearbeitet", "Rügen", "falsche Einordnung", "falsches Wort", "falsche Korrektur", "falsche Kodex-Ziffer", "Fehler wiederholt", "Umfang", "Gesamtwert", "Vorschlag " + (g.scale === "punkte" ? "Punkte" : "Note"), g.scale === "punkte" ? "Punkte" : "Note", "Arbeitsweise"]];
+  P.forEach(p => S1.push([p.name, p.rank, p.n, p.ok, p.bad, { p: p.quote }, { p: p.fq }, { p: p.arch }, p.medS, p.fast, p.skips, p.rueges, p.eW, p.eWo, p.eK, p.eKo, p.rep, { p: p.umf }, { p: p.score }, +p.auto, isNaN(+p.fin) ? p.fin : +p.fin, p.ws]));
+  S1.push([]); S1.push([`Gesamtwert = ${g.w} % Lösungsgrad + ${100 - g.w} % Umfang; Umfang voll ab ${g.ziel} Entscheidungen. Schwellen (${g.scale}): ${g.th[g.scale].join(" / ")} %`]);
+  const S2 = [["Rang", "Meldung", "Bereich", "Entscheidungen", "falsch", "Fehlerquote", "häufigste falsche Entscheidung", "häufig falsch markiert", "häufige falsche Korrektur", "richtig wäre", "korrekte Fassung", "Erklärung"]];
+  IS.forEach((x, i) => S2.push([i + 1, x.I.txt, x.I.lab, x.n, x.bad, { p: x.fq }, x.wAct[0] ? x.wAct[0][0] + " (" + x.wAct[0][1] + ")" : "", x.words.map(w => w[0] + " (" + w[1] + ")").join(", "), x.fixes.map(w => w[0] + " (" + w[1] + ")").join(", "), x.I.sol === "Kodex" ? x.I.solTxt : ACTN[x.I.sol], x.I.sol === "Kodex" ? "" : x.I.solTxt, x.I.exp]));
+  const nm = {}; teams().forEach(t => nm[t.tid] = t.name);
+  const S3 = [["Name", "Minute", "Meldung-ID", "Meldung", "Entscheidung", "richtig wäre", "Ergebnis", "Fehlerart", "markiertes Wort", "Korrekturversuch", "Bearbeitungszeit (s)", "Dossiers geöffnet"]];
+  (H.log || []).forEach(e => { const I = itemInfo(e.id); S3.push([nm[e.tid] || e.tid, Math.round(e.at / 6000) / 10, e.id, I.txt, e.k === "skip" ? "später bearbeiten" : e.sol === "Kodex" ? e.a : ACTN[e.a], e.k === "skip" ? "" : e.sol === "Kodex" ? I.solTxt : ACTN[e.sol], e.k === "skip" ? "" : e.ok ? "richtig" : "falsch", e.err ? ERRN[e.err] : "", e.w || "", e.fx || "", Math.round(e.ms / 100) / 10, e.docs || 0]); });
+  const sh = [["Bilanz", S1, [22, 14, 10, 8, 8, 11, 11, 11, 12, 12, 10, 8, 10, 10, 10, 10, 10, 10, 11, 10, 10, 70]], ["Fragenanalyse", S2, [6, 60, 22, 10, 8, 10, 22, 22, 22, 18, 60, 60]], ["Protokoll", S3, [22, 8, 12, 60, 16, 16, 9, 22, 18, 18, 10, 10]]];
+  const files = [{ name: "[Content_Types].xml", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sh.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>` },
+    { name: "_rels/.rels", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+    { name: "xl/workbook.xml", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sh.map((s, i) => `<sheet name="${s[0]}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>` },
+    { name: "xl/_rels/workbook.xml.rels", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sh.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}<Relationship Id="rId${sh.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+    { name: "xl/styles.xml", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="0%"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Standard" xfId="0" builtinId="0"/></cellStyles></styleSheet>` }]
+    .concat(sh.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(s[1], s[2]) })));
+  const a = document.createElement("a"); a.href = URL.createObjectURL(zipStore(files)); a.download = `Eilmeldung_Auswertung_${new Date(H.start || Date.now()).toISOString().slice(0, 10)}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+/* ---------- PDF-Bericht über den Druckdialog ---------- */
+function reportHtml(o){ const P = personStats(), IS = itemStats(), M = confusion(), g = GS(), sc = g.scale === "punkte" ? "Punkte" : "Note", dt = new Date(H.start || Date.now()).toLocaleDateString("de-DE");
+  const N = P.filter(p => p.n), av = f => N.length ? N.reduce((s, p) => s + f(p), 0) / N.length : 0;
+  const head = t => `<div class="rh"><b>Eilmeldung! Die Weihnachtsredaktion</b><span>${t} · ${H.cfg.exam ? "Bewertungsschicht" : "Schicht"} vom ${dt}</span></div>`;
+  let h = "";
+  if (o.bil) h += `<section>${head("Klassenauswertung")}<h1>Klassenauswertung</h1>
+    <div class="kp"><div><b>${P.length}</b>Teilnehmende</div><div><b>${pc(av(p => p.quote))}</b>Ø Lösungsgrad</div><div><b>${pc(av(p => p.fq))}</b>Ø Fehlerquote</div><div><b>${av(p => p.n).toFixed(1).replace(".", ",")}</b>Ø Entscheidungen</div><div><b>${pc(av(p => p.arch))}</b>Ø Archivnutzung</div></div>
+    <table><tr><th>Name</th><th>Stufe</th><th>Entsch.</th><th>richtig</th><th>Lösungsgrad</th><th>Fehlerquote</th><th>Archiv</th><th>Gesamt</th><th>${sc}</th></tr>${P.map(p => `<tr><td>${esc(p.name)}</td><td>${esc(p.rank)}</td><td>${p.n}</td><td>${p.ok}</td><td>${pc(p.quote)}</td><td>${pc(p.fq)}</td><td>${pc(p.arch)}</td><td>${pc(p.score)}</td><td><b>${esc(p.fin)}</b></td></tr>`).join("")}</table>
+    <p class="sm">Gesamtwert = ${g.w} % Lösungsgrad + ${100 - g.w} % Umfang (voll ab ${g.ziel} Entscheidungen). Schwellen ${sc}: ${g.th[g.scale].map((v, i) => (g.scale === "punkte" ? 15 - i : i + 1) + ": " + v + " %").join(" · ")}.</p></section>`;
+  if (o.fra) h += `<section>${head("Nachbesprechung")}<h1>Fragenanalyse für die Nachbesprechung</h1><p class="sm">Ohne Namen. Sortiert nach der Zahl der Fehlentscheidungen.</p>
+    <h2>Welche Entscheidungen wurden verwechselt?</h2><table><tr><th>richtig wäre</th>${"SKVZ".split("").map(a => `<th>${ACTN[a]}</th>`).join("")}</tr>${"SKVZ".split("").map(s => `<tr><td><b>${ACTN[s]}</b> (${M[s].n})</td>${"SKVZ".split("").map(a => `<td${a === s ? ' class="ok"' : ""}>${M[s].n ? pc(M[s][a] / M[s].n) : "–"}</td>`).join("")}</tr>`).join("")}</table>
+    <h2>Meldungen mit den meisten Fehlern</h2>${IS.filter(x => x.bad).slice(0, 12).map((x, i) => `<div class="it"><b>${i + 1}. „${esc(x.I.txt)}“</b> <span class="sm">${esc(x.I.lab)} · ${x.bad} von ${x.n} falsch (${pc(x.fq)})</span><br>
+      Entscheidungen: ${x.acts.map(a => esc(a[0]) + " " + a[1] + "×").join(", ")}${x.words.length ? ` · markiert: ${x.words.map(a => "„" + esc(a[0]) + "“ " + a[1] + "×").join(", ")}` : ""}${x.fixes.length ? ` · Korrekturen: ${x.fixes.map(a => "„" + esc(a[0]) + "“ " + a[1] + "×").join(", ")}` : ""}<br>
+      <i>Richtig: ${x.I.sol === "Kodex" ? esc(x.I.solTxt) : ACTN[x.I.sol] + (x.I.sol === "K" ? " – " + esc(x.I.solTxt) : "")}</i>${x.I.exp ? `<br><span class="sm">${esc(x.I.exp)}</span>` : ""}</div>`).join("") || "<p>Keine Fehler.</p>"}</section>`;
+  if (o.ein) P.forEach(p => { const mine = (H.log || []).filter(e => e.tid === p.t.tid && e.k !== "skip" && !e.ok);
+    h += `<section>${head("Einzelbogen")}<h1>${esc(p.name)}</h1>
+     <div class="kp"><div><b>${p.n}</b>Entscheidungen</div><div><b>${pc(p.quote)}</b>Lösungsgrad</div><div><b>${pc(p.fq)}</b>Fehlerquote</div><div><b>${pc(p.arch)}</b>Archivnutzung</div><div><b>${esc(p.fin)}</b>${sc}</div></div>
+     <table><tr><th>erreichte Stufe</th><td>${esc(p.rank)}</td><th>Median Bearbeitungszeit</th><td>${p.medS} s</td></tr><tr><th>schnelle Entscheidungen ohne Archiv</th><td>${p.fast}</td><th>später bearbeitet</th><td>${p.skips}</td></tr>
+      <tr><th>Fehlerarten</th><td colspan="3">Einordnung ${p.eW} · falsches Wort ${p.eWo} · falsche Korrektur ${p.eK} · Kodex ${p.eKo} · wiederholt ${p.rep} · Rügen ${p.rueges}</td></tr></table>
+     <h2>Arbeitsweise</h2><p>${esc(p.ws)}.</p>
+     <h2>Fehlentscheidungen</h2>${mine.length ? `<table><tr><th>Meldung</th><th>Entscheidung</th><th>richtig wäre</th></tr>${mine.map(e => { const I = itemInfo(e.id); return `<tr><td>${esc(I.txt)}</td><td>${e.sol === "Kodex" ? esc(e.a) : ACTN[e.a]}${e.w ? " („" + esc(e.w) + "“)" : ""}${e.fx ? " → „" + esc(e.fx) + "“" : ""}</td><td>${e.sol === "Kodex" ? esc(I.solTxt) : ACTN[e.sol] + (e.sol === "K" ? " → „" + esc(I.fix) + "“" : "")}</td></tr>`; }).join("")}</table>` : "<p>Keine.</p>"}
+     <p class="sm" style="margin-top:14px">Gesamtwert ${pc(p.score)} = ${g.w} % × Lösungsgrad ${pc(p.quote)} + ${100 - g.w} % × Umfang ${pc(p.umf)}.</p></section>`; });
+  return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Eilmeldung – Auswertung ${dt}</title><style>
+   @page{size:A4;margin:14mm}body{font-family:'Source Sans 3',Arial,sans-serif;font-size:11pt;color:#111}section{page-break-after:always}section:last-child{page-break-after:auto}
+   h1{font-size:18pt;margin:4px 0 10px}h2{font-size:13pt;margin:14px 0 6px}.rh{display:flex;justify-content:space-between;border-bottom:2px solid #c8102e;padding-bottom:4px;font-size:10pt;color:#555}
+   table{border-collapse:collapse;width:100%;margin:6px 0}th,td{border:1px solid #bbb;padding:2.5px 5px;text-align:left;vertical-align:top;font-size:10pt}th{background:#eef1f6}td.ok{background:#dff1e3;font-weight:700}
+   .kp{display:flex;gap:8px;margin:8px 0}.kp div{flex:1;border:1px solid #bbb;border-radius:6px;padding:6px;text-align:center;font-size:9.5pt;color:#555}.kp b{display:block;font-size:16pt;color:#111}
+   .sm{font-size:9.5pt;color:#555}.it{border-left:4px solid #c8102e;padding:4px 8px;margin:6px 0;page-break-inside:avoid}</style></head><body>${h}</body></html>`; }
+function expPdf(){ const o = { bil: $("#rp1").checked, fra: $("#rp2").checked, ein: $("#rp3").checked }; if (!o.bil && !o.fra && !o.ein) return;
+  const w = window.open("", "_blank"); if (!w) { alert("Bitte Pop-ups für diese Seite erlauben."); return; }
+  w.document.open(); w.document.write(reportHtml(o)); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 400); }
+/* Beamer im Bewertungsmodus: ohne Namen und ohne Rangliste */
+function examBoard(){ const ts = teams(), L = (H.log || []).filter(e => e.k !== "skip"), on = ts.filter(t => t.online).length, ok = L.filter(e => e.ok).length;
+  return `<div class="glass card" style="max-width:980px;margin:0 auto;text-align:center"><h2>📋 Bewertungsschicht läuft</h2><p class="note">Jede und jeder arbeitet für sich. Ruhe im Raum – die Redaktion prüft.</p>
+   <div class="tiles" style="grid-template-columns:repeat(3,1fr)"><div class="tile"><span>🟢</span><div class="note">verbunden</div><b>${on} / ${ts.length}</b></div><div class="tile"><span>📰</span><div class="note">Entscheidungen der Klasse</div><b>${L.length}</b></div><div class="tile"><span>✅</span><div class="note">davon richtig</div><b>${L.length ? pc(ok / L.length) : "–"}</b></div></div>
+   <div class="dots">${ts.map(t => `<i class="${t.online ? "on" : ""}"></i>`).join("")}</div></div>`; }
 
 home();
 </script></body></html>
